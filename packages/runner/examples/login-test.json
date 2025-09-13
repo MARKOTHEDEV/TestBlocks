@@ -1,0 +1,28 @@
+{
+  "name": "Login Test",
+  "baseUrl": "http://localhost:5174",
+  "steps": [
+    {
+      "op": "goto",
+      "url": "/"
+    },
+    {
+      "op": "fill",
+      "qaId": "qa:textbox:email:abc123",
+      "value": "test@example.com"
+    },
+    {
+      "op": "fill",
+      "qaId": "qa:textbox:password:def456",
+      "value": "password"
+    },
+    {
+      "op": "click",
+      "qaId": "qa:button:sign-in:ghi789"
+    },
+    {
+      "op": "expectVisible",
+      "qaId": "qa:heading:dashboard:jkl012"
+    }
+  ]
+}

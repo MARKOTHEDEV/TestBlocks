@@ -1,0 +1,35 @@
+{
+  "name": "hybrid-qa-test-builder",
+  "version": "1.0.0",
+  "description": "Hybrid QA Test Builder with Blockly editor and Chrome extension",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "build": "pnpm -r build && node scripts/build.js",
+    "build:sdk": "pnpm --filter sdk build",
+    "build:extension": "pnpm --filter extension build",
+    "build:builder": "pnpm --filter builder build",
+    "build:runner": "pnpm --filter runner build",
+    "dev": "pnpm -r --parallel dev",
+    "dev:builder": "pnpm --filter builder dev",
+    "dev:sample-site": "pnpm --filter sample-site dev",
+    "dev:extension": "pnpm --filter extension dev",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

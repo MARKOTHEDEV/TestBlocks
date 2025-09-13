@@ -1,0 +1,109 @@
+You are a senior full-stack engineer. Build a minimal, production-ready MVP for a **Hybrid QA Test Builder** where QA authors tests via **blocks (Blockly)** and target elements using a **Chrome MV3 extension** + **on-page SDK** that assigns stable `data-qa-id` IDs on demand.
+
+## Core UX (non-negotiable)
+- QA uses a Scratch/Blockly-style editor (drag blocks).
+- For any block needing a target (Click, Fill, Expect), the user clicks **“Pick element”**.
+- A Chrome extension toggles pick mode; the on-page SDK highlights elements and, on click, **ensures** a stable `data-qa-id` is present, then returns `{ qaId, role, name, frameChain }`.
+- The block’s **Target** field is auto-filled with that `qaId`. Blocks compile to a JSON spec using `qaId` (no CSS selectors in the spec).
+
+## Tech + Repo Layout (pnpm workspaces + TypeScript)
+- Root
+  - `package.json` (pnpm), `pnpm-workspace.yaml`, `.eslintrc`, `.prettierrc`, `tsconfig.base.json`
+- `packages/sdk`  → on-page script tag SDK (“qa-tagger”)
+- `packages/extension` → Chrome MV3 extension (popup + content + background)
+- `packages/runner` → Node + Playwright runner (executes JSON specs using `[data-qa-id="..."]`)
+- `apps/builder` → Vite + React + Blockly app (block editor)
+- `apps/sample-site` → Static sample app (login form) for testing picking & runs
+
+## SDK Requirements (`packages/sdk`)
+- Build as small, framework-free TypeScript → IIFE bundle served as `qa-tagger.v1.js`. No network calls.
+- Global API: `window.__QATagger = { start(), stop(), ensureQaId(el) }`.
+- When pick mode is active:
+  - Show a fixed, high-z-index hover rectangle overlay.
+  - On click: prevent default/stop propagation, compute/assign `data-qa-id`, and `window.postMessage({ __qa:true, type:"ELEMENT_PICKED", qaId, role, name, frameChain })`.
+- ID strategy:
+  - If element already has `data-testid|data-test|data-qa`, reuse that value as `data-qa-id`.
+  - Else compute deterministic ID:
+    - Build a JSON “semantic signature” from tag, inferred ARIA role, accessible name (aria-label/labelledby/placeholder/alt/innerText), input type, trimmed href path (if <a>), a stable parent hint (id or 1–2 class tokens if not hashy), and sibling ordinal when needed.
+    - Hash signature with SHA-256 (first 8 bytes); encode base36.
+    - `qaId = "qa:<role|node>:<hint-≤12chars>:<shortHash>"` where <hint> slugs name/id/placeholder/tag.
+  - Assign: `el.setAttribute("data-qa-id", qaId)`.
+- Accessibility helpers: `inferRole(el)`, `accName(el)`.
+- Shadow DOM: include a simple `frameChain` of shadow hosts (tags). Iframes: add a placeholder (we’ll scope later).
+- Messaging: respond only to `window.postMessage` with `__qa:true` and types `START_PICK` / `STOP_PICK`.
+
+## Extension Requirements (`packages/extension`, MV3)
+- Files: `manifest.json`, `popup.(tsx|html)`, `content-script.ts`, `background.ts`.
+- Permissions: `activeTab`, `scripting`.
+- Flow:
+  - Popup toggle → send `{ cmd: "pick-start" }` to active tab.
+  - Content script injects page messages: `window.postMessage({ __qa:true, type:"START_PICK" })` and listens to page `message` for `ELEMENT_PICKED`.
+  - On `ELEMENT_PICKED`, forward payload via `chrome.runtime.sendMessage({ type:"ELEMENT_PICKED", payload })`.
+  - Background relays to the builder app (if open) via `chrome.tabs.sendMessage` or leaves it in a simple in-memory queue accessible via `chrome.runtime.onMessage`.
+- UX: single “Pick element” button + status.
+
+## Builder App (`apps/builder`, Vite + React + Blockly)
+- Minimal left pane: blocks toolbox. Right pane: workspace + inspector of selected block fields.
+- Blocks (define Blockly types + JSON renderer):
+  - `goto(url)`
+  - `click(qaId)`
+  - `fill(qaId, value)`
+  - `expectVisible(qaId)`
+  - `withinContainer(containerQaId)` (statement block to nest steps) ← optional but scaffold
+  - `withinFrame(frameChain)` ← optional but scaffold
+- Each targetable block shows a **Target** field with a **Pick** button.
+  - Clicking **Pick** asks the extension to start pick mode and displays a “picking…” indicator.
+  - When `ELEMENT_PICKED` arrives, fill the `qaId` field and store any `frameChain`.
+- Export/Run:
+  - **Export JSON** spec:
+    ```
+    {
+      "name": "<test name>",
+      "baseUrl": "http://localhost:5174", // sample-site
+      "steps": [ { "op": "goto", "url": "/login" }, { "op": "fill", "qaId": "...", "value": "..." }, ... ]
+    }
+    ```
+  - **Run with runner**: call a small backend helper or show CLI instructions; MVP can just download the JSON and show a command line.
+
+## Runner (`packages/runner`, Node + Playwright)
+- API: `runSpec(specJson: Spec): Promise<RunResult>`
+- CLI: `pnpm run test:spec ./examples/spec.json`
+- Locator helper: `page.locator([data-qa-id="${qaId}"])`
+- Supports ops: `goto`, `click`, `fill`, `expectVisible`. Add `withinContainer` and `withinFrame` by scoping locator when present.
+- Artifacts to `artifacts/<timestamp>/` (screenshots, video, trace). Minimal retries (1) and default timeouts.
+
+## Sample Site (`apps/sample-site`)
+- Simple HTML login (`/login`): email, password, sign-in button, dashboard text on success.
+- Served via Vite dev server to test the full flow.
+- Include SDK in `index.html` via `<script src="/qa-tagger.v1.js"></script>` (dev only).
+
+## Wiring the Message Bus (Builder <-> Extension <-> Page)
+- Define a tiny `message-protocol.ts` shared type with:
+  - Page posts: `{ __qa:true, type:"ELEMENT_PICKED", qaId:string, role?:string, name?:string, frameChain?:any[] }`
+  - Content receives page messages and forwards to background.
+  - Builder listens via `chrome.runtime.onMessage` (when running as a tab, use a small helper in builder to connect).
+- In builder, maintain a “current picking request” so the `qaId` goes into the right block field.
+
+## Scripts & Tooling
+- `pnpm -w install`, `pnpm -w build`
+- Each package has `build`, `dev` where appropriate.
+- Root README with:
+  - How to run sample-site (`pnpm dev:sample-site`), builder (`pnpm dev:builder`)
+  - How to load the extension unpacked
+  - How to include SDK on any page
+  - How to export/run a spec with runner
+
+## Acceptance Criteria (must pass)
+1) With the SDK script loaded on sample-site, clicking “Pick element” in builder triggers highlight/pick on the page and returns a **`qaId`**.
+2) If an element already has `data-testid|data-test|data-qa`, that exact value is mirrored to `data-qa-id` and used.
+3) The selected `qaId` auto-fills the block’s Target field; exporting produces a JSON spec referencing only `qaId` values.
+4) Runner executes the JSON spec with Playwright and saves artifacts.
+5) If the SDK isn’t present, the builder shows a clear nudge (“SDK not detected on page; add `<script src='.../qa-tagger.v1.js'>` for stable IDs”) and disables picking.
+
+## Implementation Notes
+- TypeScript strict everywhere, Node >= 20.
+- Keep the SDK bundle small (<10KB gzipped), only tags on pick click (no global MutationObserver in MVP).
+- Extension CSP-safe; content script must not fetch external resources.
+- Cleanly separate concerns: SDK (in-page), extension (browser bridge), builder (UX + blocks), runner (exec).
+
+Generate all source files, basic styling, and READMEs. If any detail is ambiguous, pick sensible defaults and document them.

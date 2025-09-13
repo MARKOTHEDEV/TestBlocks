@@ -1,0 +1,17 @@
+{
+  "name": "@qa-builder/extension",
+  "version": "1.0.0",
+  "description": "Chrome MV3 extension for QA test builder",
+  "scripts": {
+    "build": "tsc && cp -r src/* dist/",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.251",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@qa-builder/shared": "workspace:*"
+  }
+}

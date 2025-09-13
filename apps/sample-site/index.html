@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sample Site - QA Test Builder</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 40px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 28px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #555;
+      }
+
+      input[type='email'],
+      input[type='password'] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+      }
+
+      input[type='email']:focus,
+      input[type='password']:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      .btn:hover {
+        background: #5a6fd8;
+      }
+
+      .btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .error {
+        color: #e74c3c;
+        font-size: 14px;
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      .success {
+        color: #27ae60;
+        font-size: 14px;
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      .dashboard {
+        display: none;
+        text-align: center;
+      }
+
+      .dashboard h2 {
+        color: #27ae60;
+        margin-bottom: 20px;
+      }
+
+      .dashboard p {
+        color: #666;
+        margin-bottom: 20px;
+      }
+
+      .logout-btn {
+        background: #e74c3c;
+        width: auto;
+        padding: 10px 20px;
+      }
+
+      .logout-btn:hover {
+        background: #c0392b;
+      }
+
+      .qa-info {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        max-width: 300px;
+      }
+
+      /* QA Toggle Button */
+      .qa-toggle {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 10000;
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s;
+      }
+      .qa-toggle:hover {
+        background: #218838;
+        transform: translateY(-1px);
+      }
+      .qa-toggle.active {
+        background: #dc3545;
+      }
+      .qa-toggle.active:hover {
+        background: #c82333;
+      }
+
+      /* QA Tooltip */
+      .qa-tooltip {
+        position: absolute;
+        background: #333;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-family: 'Monaco', 'Menlo', monospace;
+        z-index: 10000;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        max-width: 300px;
+        word-break: break-all;
+        opacity: 0;
+        transform: translateY(-5px);
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
+      .qa-tooltip.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .qa-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: #333;
+      }
+
+      /* QA Highlight */
+      .qa-highlight {
+        position: relative;
+        outline: 2px solid #007bff !important;
+        outline-offset: 2px;
+        background: rgba(0, 123, 255, 0.1) !important;
+      }
+
+      /* QA Overlay (simplified) */
+      .qa-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        display: none;
+        pointer-events: none;
+      }
+      .qa-overlay.active {
+        display: block;
+      }
+      .qa-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 300px;
+        pointer-events: auto;
+      }
+      .qa-panel h3 {
+        margin: 0 0 10px 0;
+        color: #333;
+        font-size: 14px;
+      }
+      .qa-stats {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 10px;
+      }
+      .copy-all-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        width: 100%;
+        transition: background 0.2s;
+      }
+      .copy-all-btn:hover {
+        background: #218838;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- QA Toggle Button -->
+    <button class="qa-toggle" id="qaToggle">🔍 Show QA IDs</button>
+
+    <!-- QA Info -->
+    <div class="qa-info">
+      <strong>QA Test Builder Sample Site</strong><br />
+      This site includes the QA Tagger SDK for element picking.
+    </div>
+
+    <!-- QA Overlay -->
+    <div class="qa-overlay" id="qaOverlay">
+      <div class="qa-panel">
+        <h3>🎯 QA Mode Active</h3>
+        <div class="qa-stats" id="qaStats">0 elements with QA IDs</div>
+        <button class="copy-all-btn" id="copyAllBtn">📋 Copy All IDs</button>
+      </div>
+    </div>
+
+    <!-- QA Tooltip -->
+    <div class="qa-tooltip" id="qaTooltip"></div>
+
+    <div class="container">
+      <div id="loginForm">
+        <h1>Welcome Back</h1>
+        <form id="login">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn" id="signInBtn">Sign In</button>
+
+          <div id="errorMessage" class="error" style="display: none"></div>
+        </form>
+      </div>
+
+      <div id="dashboard" class="dashboard">
+        <h2>Dashboard</h2>
+        <p>Welcome! You have successfully logged in.</p>
+        <p>This is a sample dashboard page for testing the QA builder.</p>
+        <button class="btn logout-btn" id="logoutBtn">Logout</button>
+      </div>
+    </div>
+
+    <!-- Load QA Tagger SDK -->
+    <script src="/qa-tagger.v1.js"></script>
+
+    <script>
+      // Simple login simulation
+      const loginForm = document.getElementById('loginForm');
+      const dashboard = document.getElementById('dashboard');
+      const loginFormEl = document.getElementById('login');
+      const errorMessage = document.getElementById('errorMessage');
+      const signInBtn = document.getElementById('signInBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      loginFormEl.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Simple validation
+        if (email === 'test@example.com' && password === 'password') {
+          // Success
+          loginForm.style.display = 'none';
+          dashboard.style.display = 'block';
+          errorMessage.style.display = 'none';
+        } else {
+          // Error
+          errorMessage.textContent =
+            'Invalid email or password. Try test@example.com / password';
+          errorMessage.style.display = 'block';
+        }
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        loginForm.style.display = 'block';
+        dashboard.style.display = 'none';
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        errorMessage.style.display = 'none';
+      });
+
+      // Show SDK status and performance info
+      if (window.__QATagger) {
+        console.log('QA Tagger SDK loaded successfully');
+        console.log(
+          'Performance optimizations: Throttled observers, passive events, quick attribute checks'
+        );
+      } else {
+        console.warn('QA Tagger SDK not loaded');
+      }
+
+      // Simple performance monitoring
+      let mouseEventCount = 0;
+      const originalHandleMouseOver = handleMouseOver;
+      handleMouseOver = function (event) {
+        mouseEventCount++;
+        if (mouseEventCount % 100 === 0) {
+          console.log(`Mouse events processed: ${mouseEventCount}`);
+        }
+        return originalHandleMouseOver(event);
+      };
+
+      // Listen for test execution messages from the builder
+      window.addEventListener('message', (event) => {
+        console.log('Received message:', event.data);
+
+        if (event.data?.type === 'QA_CLICK') {
+          const element = document.querySelector(
+            `[data-qa-id="${event.data.qaId}"]`
+          );
+          if (element) {
+            element.click();
+            console.log('Clicked element:', event.data.qaId);
+          } else {
+            console.log('Element not found for QA_CLICK:', event.data.qaId);
+          }
+        } else if (event.data?.type === 'QA_FILL') {
+          const element = document.querySelector(
+            `[data-qa-id="${event.data.qaId}"]`
+          );
+          if (element) {
+            element.value = event.data.value;
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log(
+              'Filled element:',
+              event.data.qaId,
+              'with:',
+              event.data.value
+            );
+          } else {
+            console.log('Element not found for QA_FILL:', event.data.qaId);
+          }
+        }
+      });
+
+      // QA Toggle functionality
+      const qaToggle = document.getElementById('qaToggle');
+      const qaOverlay = document.getElementById('qaOverlay');
+      const qaStats = document.getElementById('qaStats');
+      const copyAllBtn = document.getElementById('copyAllBtn');
+      const qaTooltip = document.getElementById('qaTooltip');
+      let isQAMode = false;
+      let hoveredElement = null;
+
+      qaToggle.addEventListener('click', () => {
+        isQAMode = !isQAMode;
+        if (isQAMode) {
+          qaToggle.textContent = '🔍 Hide QA IDs';
+          qaToggle.classList.add('active');
+          qaOverlay.classList.add('active');
+          enableQAMode();
+        } else {
+          qaToggle.textContent = '🔍 Show QA IDs';
+          qaToggle.classList.remove('active');
+          qaOverlay.classList.remove('active');
+          disableQAMode();
+        }
+      });
+
+      // Add manual ID generation button
+      const generateIdsBtn = document.createElement('button');
+      generateIdsBtn.textContent = '⚡ Generate IDs';
+      generateIdsBtn.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 200px;
+        z-index: 10000;
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: all 0.2s;
+      `;
+      generateIdsBtn.addEventListener('click', () => {
+        if (window.__QATagger) {
+          // Generate IDs for all interactive elements
+          const elements = document.querySelectorAll(
+            'input, button, select, textarea, a[href]'
+          );
+          elements.forEach((el) => {
+            window.__QATagger.ensureQaId(el);
+          });
+          updateQAStats();
+          generateIdsBtn.textContent = '✅ IDs Generated!';
+          setTimeout(() => {
+            generateIdsBtn.textContent = '⚡ Generate IDs';
+          }, 2000);
+        }
+      });
+      document.body.appendChild(generateIdsBtn);
+
+      copyAllBtn.addEventListener('click', () => {
+        const elements = document.querySelectorAll('[data-qa-id]');
+        const allIds = Array.from(elements).map((el) =>
+          el.getAttribute('data-qa-id')
+        );
+        const idsText = allIds.join('\n');
+
+        navigator.clipboard.writeText(idsText).then(() => {
+          copyAllBtn.textContent = '✅ Copied All!';
+          setTimeout(() => {
+            copyAllBtn.textContent = '📋 Copy All IDs';
+          }, 2000);
+        });
+      });
+
+      function enableQAMode() {
+        // Add event listeners with passive option for better performance
+        document.addEventListener('mouseover', handleMouseOver, {
+          passive: true,
+        });
+        document.addEventListener('mouseout', handleMouseOut, {
+          passive: true,
+        });
+        document.addEventListener('click', handleClick, { passive: false });
+        updateQAStats();
+      }
+
+      function disableQAMode() {
+        // Remove event listeners
+        document.removeEventListener('mouseover', handleMouseOver);
+        document.removeEventListener('mouseout', handleMouseOut);
+        document.removeEventListener('click', handleClick);
+
+        // Hide tooltip and remove highlights
+        hideTooltip();
+        removeAllHighlights();
+      }
+
+      function handleMouseOver(event) {
+        if (!isQAMode) return;
+
+        const element = event.target;
+        // Quick check - only proceed if element has data-qa-id
+        if (!element.hasAttribute('data-qa-id')) return;
+
+        const qaId = element.getAttribute('data-qa-id');
+        hoveredElement = element;
+        showTooltip(element, qaId);
+        highlightElement(element);
+      }
+
+      function handleMouseOut(event) {
+        if (!isQAMode || !hoveredElement) return;
+
+        const element = event.target;
+        if (element === hoveredElement) {
+          hideTooltip();
+          removeHighlight(element);
+          hoveredElement = null;
+        }
+      }
+
+      function handleClick(event) {
+        if (!isQAMode) return;
+
+        const element = event.target;
+        // Quick check - only proceed if element has data-qa-id
+        if (!element.hasAttribute('data-qa-id')) return;
+
+        const qaId = element.getAttribute('data-qa-id');
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(qaId).then(() => {
+          showTooltip(element, qaId + ' ✅ COPIED!');
+          setTimeout(() => {
+            hideTooltip();
+          }, 1500);
+        });
+      }
+
+      function showTooltip(element, text) {
+        const rect = element.getBoundingClientRect();
+        qaTooltip.textContent = text;
+        qaTooltip.style.left = rect.left + rect.width / 2 + 'px';
+        qaTooltip.style.top = rect.top - 10 + 'px';
+        qaTooltip.classList.add('show');
+      }
+
+      function hideTooltip() {
+        qaTooltip.classList.remove('show');
+      }
+
+      function highlightElement(element) {
+        element.classList.add('qa-highlight');
+      }
+
+      function removeHighlight(element) {
+        element.classList.remove('qa-highlight');
+      }
+
+      function removeAllHighlights() {
+        document.querySelectorAll('.qa-highlight').forEach((el) => {
+          el.classList.remove('qa-highlight');
+        });
+      }
+
+      function updateQAStats() {
+        const elements = document.querySelectorAll('[data-qa-id]');
+        qaStats.textContent = `${elements.length} elements with QA IDs`;
+      }
+
+      // Auto-update stats when new elements get QA IDs (throttled for performance)
+      let updateTimeout = null;
+      const observer = new MutationObserver((mutations) => {
+        // Throttle updates to avoid excessive calls
+        if (updateTimeout) return;
+
+        updateTimeout = setTimeout(() => {
+          let shouldUpdate = false;
+          mutations.forEach((mutation) => {
+            if (
+              mutation.type === 'attributes' &&
+              mutation.attributeName === 'data-qa-id'
+            ) {
+              shouldUpdate = true;
+            }
+            if (mutation.type === 'childList') {
+              mutation.addedNodes.forEach((node) => {
+                if (
+                  node.nodeType === 1 &&
+                  (node.hasAttribute('data-qa-id') ||
+                    node.querySelector('[data-qa-id]'))
+                ) {
+                  shouldUpdate = true;
+                }
+              });
+            }
+          });
+          if (shouldUpdate) {
+            updateQAStats();
+          }
+          updateTimeout = null;
+        }, 100); // Throttle to max once per 100ms
+      });
+
+      observer.observe(document.body, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ['data-qa-id'],
+      });
+    </script>
+  </body>
+</html>

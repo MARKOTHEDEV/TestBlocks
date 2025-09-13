@@ -1,0 +1,22 @@
+{
+  "name": "@qa-builder/sdk",
+  "version": "1.0.0",
+  "description": "On-page SDK for element picking and stable ID generation",
+  "main": "dist/qa-tagger.js",
+  "types": "dist/qa-tagger.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^11.1.5",
+    "rollup": "^4.9.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "typescript": "^5.3.0",
+    "tslib": "^2.6.0"
+  },
+  "dependencies": {
+    "@qa-builder/shared": "workspace:*"
+  }
+}
